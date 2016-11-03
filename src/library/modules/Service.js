@@ -18,7 +18,19 @@ See Manifest File [manifest.json] under "background" > "scripts"
 (function(){
 	"use strict";
 	
-	console.log("KC3改 Background Service loaded");
+	console.info("KC3改 Background Service loaded");
+	
+	
+	if (typeof localStorage.kc3version == "undefined"){
+		window.open("../../pages/update/update.html#installed", "kc3kai_updates");
+		
+	} else {
+		if (localStorage.kc3version != chrome.runtime.getManifest().version) {
+			window.open("../../pages/update/update.html#updated", "kc3kai_updates");
+		}
+	}
+	
+	localStorage.kc3version = chrome.runtime.getManifest().version;
 	
 	window.KC3Service = {
 		
@@ -34,7 +46,6 @@ See Manifest File [manifest.json] under "background" > "scripts"
 			// If refreshing API link, close source tabs and re-open game frame
 			if(JSON.parse(localStorage.extract_api)){ // localStorage has problems with native boolean
 				localStorage.extract_api = false;
-				// #137 open window first before closing source tab
 				window.open("../pages/game/api.html", "kc3kai_game");
 				chrome.tabs.remove([sender.tab.id], function(){});
 			}
@@ -123,6 +134,47 @@ See Manifest File [manifest.json] under "background" > "scripts"
 			(new TMsg(request.tabId, "gamescreen", "fitScreen")).execute();
 		},
 		
+		/* IS MUTED
+		Returns boolean if the tab is muted or not
+		------------------------------------------*/
+		"isMuted" :function(request, sender, response){
+			chrome.tabs.get(request.tabId, function(tabInfo){
+				try {
+					response(tabInfo.mutedInfo.muted);
+				}catch(e){
+					response(false);
+				}
+			});
+			return true;
+		},
+		
+		/* TOGGLE SOUNDS
+		Mute or unmute the tab
+		------------------------------------------*/
+		"toggleSounds" :function(request, sender, response){
+			chrome.tabs.get(request.tabId, function(tabInfo){
+				try {
+					chrome.tabs.update(request.tabId, {
+						muted: tabInfo.mutedInfo.muted?false:true,
+					});
+					response(!tabInfo.mutedInfo.muted);
+				}catch(e){
+					response(false);
+				}
+				return true;
+			});
+			return true;
+		},
+		
+		/* OPEN COOKIE SETTINGS
+		DevTools can't use chrome.tabs by itself, so service will open the page for them
+		------------------------------------------*/
+		"openCookieSettings" :function(request, sender, response){
+			chrome.tabs.create({
+				url:'chrome://settings/content'
+			});
+		},
+		
 		/* DMM FRMAE INJECTION
 		Responds if content script should inject DMM Frame customizations
 		------------------------------------------*/
@@ -146,6 +198,20 @@ See Manifest File [manifest.json] under "background" > "scripts"
 		------------------------------------------*/
 		"taihaAlertStop" :function(request, sender, response){
 			(new TMsg(request.tabId, "gamescreen", "taihaAlertStop")).execute();
+		},
+
+		/* SUBTITLES
+		When a ship speaks, show subtitles
+		------------------------------------------*/
+		"subtitle" :function(request, sender, response){
+			console.debug("subtitle", request);
+			(new TMsg(request.tabId, "gamescreen", "subtitle", {
+				voicetype: request.voicetype,
+				filename: request.filename || false,
+				shipID: request.shipID || false,
+				voiceNum: request.voiceNum,
+				url: request.url
+			})).execute();
 		}
 		
 	};

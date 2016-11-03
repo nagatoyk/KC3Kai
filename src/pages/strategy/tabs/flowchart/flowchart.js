@@ -12,6 +12,13 @@
 		Prepares all data needed
 		---------------------------------*/
 		init :function(){
+
+		},
+
+		/* RELOAD
+		Prepares latest quests data
+		---------------------------------*/
+		reload :function(){
 			KC3QuestManager.load();
 		},
 		
@@ -44,26 +51,26 @@
 			
 			$(".resetDailies").on("click", function(){
 				KC3QuestManager.resetDailies();
-				window.location.reload();
+				KC3StrategyTabs.reloadTab(undefined, true);
 			});
 			
 			$(".resetWeeklies").on("click", function(){
 				KC3QuestManager.resetWeeklies();
-				window.location.reload();
+				KC3StrategyTabs.reloadTab(undefined, true);
 			});
 			
 			$(".resetMonthlies").on("click", function(){
 				KC3QuestManager.resetMonthlies();
-				window.location.reload();
+				KC3StrategyTabs.reloadTab(undefined, true);
 			});
 			
 			$(".resetAllQuests").on("click", function(){
 				KC3QuestManager.clear();
-				window.location.reload();
+				KC3StrategyTabs.reloadTab(undefined, true);
 			});
 			
 			// Manual quest count overrides
-			$(".tab_flowchart").on("click", ".questOverride", function(){
+			$(".flowchart").on("click", ".questOverride", function(){
 				var editingQuest = KC3QuestManager.get($(this).data("id"));
 				if(typeof editingQuest.tracking != "undefined"){
 					// +1
@@ -85,21 +92,21 @@
 			});
 			
 			// Manual override quest status
-			$(".tab_flowchart").on("click", ".questToggle", function(){
+			$(".flowchart").on("click", ".questToggle", function(){
 				var editingQuest = KC3QuestManager.get($(this).data("id"));
 				console.log(editingQuest.status);
 				editingQuest.status++;
 				if(editingQuest.status>=4){ editingQuest.status=0; }
 				KC3QuestManager.save();
-				window.location.reload();
+				KC3StrategyTabs.reloadTab(undefined, true);
 			});
 			
 			// Manual remove quest
-			$(".tab_flowchart").on("click", ".questRemove", function(){
+			$(".page_padding").on("click", ".questRemove", function(){
 				console.log(KC3QuestManager.list["q"+$(this).data("id")]);
 				delete KC3QuestManager.list["q"+$(this).data("id")];
 				KC3QuestManager.save();
-				window.location.reload();
+				KC3StrategyTabs.reloadTab(undefined, true);
 			});
 			
 		},
@@ -118,6 +125,11 @@
 			$(".questIcon", thisBox).text( thisQuest.code );
 			$(".questIcon", thisBox).addClass("type"+(String(quest_id).substring(0,1)));
 			$(".questDesc", thisBox).text( thisQuest.desc);
+			var title = quest_id+": ["+thisQuest.code+"] "+thisQuest.name+"\n"+thisQuest.desc;
+			if(!!thisQuest.memo) {
+				title += "\n" + thisQuest.memo;
+			}
+			$(".questDesc", thisBox).attr("title", title);
 			$(".questOverride", thisBox).data("id", quest_id);
 			$(".questToggle", thisBox).data("id", quest_id);
 			$(".questRemove", thisBox).data("id", quest_id);
@@ -140,6 +152,7 @@
 						$(".questInfo .questIcon", thisBox).css({
 							"background-image": "url(../../assets/img/ui/quest_active.png)",
 							"background-color": "transparent",
+							"background-repeat": "no-repeat",
 							"margin-right": "0px"
 						});
 						break;
@@ -151,6 +164,7 @@
 						$(".questInfo .questIcon", thisBox).css({
 							"background-image": "url(../../assets/img/ui/quest_check.png)",
 							"background-color": "transparent",
+							"background-repeat": "no-repeat",
 							"margin-right": "0px"
 						});
 						break;
@@ -178,7 +192,9 @@
 				var childContainer = $("ul.questChildren", thisBox);
 				childContainer.attr("id", "questBox_"+quest_id);
 				for(ctr in thisQuest.unlock){
-					this.seedBranch( childContainer, thisQuest.unlock[ctr] );
+					if(KC3QuestManager.isPeriod(thisQuest.unlock[ctr])){
+						this.seedBranch( childContainer, thisQuest.unlock[ctr] );
+					}
 				}
 			}
 		},
@@ -190,9 +206,23 @@
 			// console.log(masterQuest, thisQuest);
 			
 			var thisBox = $(".tab_flowchart .factory .questExtraItem").clone().appendTo(".tab_flowchart .extralist");
-			$(".questIcon", thisBox).text( thisQuest.id );
+			$(".questIcon", thisBox).text( masterQuest.code || thisQuest.id );
 			$(".questIcon", thisBox).addClass("type"+(String(thisQuest.id).substring(0,1)));
-			$(".questDesc", thisBox).text( thisQuest.meta().desc );
+			$(".questDesc", thisBox).text( masterQuest.desc || KC3Meta.term("UntranslatedQuest") );
+			var title = thisQuest.id+": ["+(masterQuest.code||"N/A")+"] "
+				+ (masterQuest.name || KC3Meta.term("UntranslatedQuest"))
+				+ "\n"+(masterQuest.desc || KC3Meta.term("UntranslatedQuestTip"));
+			if(!!masterQuest.memo) {
+				title += "\n" + masterQuest.memo;
+			}
+			if(!!masterQuest.unlock) {
+				var ctr;
+				for(ctr in masterQuest.unlock) {
+					var cq = KC3Meta.quest(masterQuest.unlock[ctr]);
+					if(!!cq) title += "\n -> "+masterQuest.unlock[ctr]+": ["+(cq.code||"N/A")+"] "+cq.name;
+				}
+			}
+			$(".questDesc", thisBox).attr("title", title);
 			$(".questToggle", thisBox).data("id", thisQuest.id);
 			$(".questRemove", thisBox).data("id", thisQuest.id);
 			

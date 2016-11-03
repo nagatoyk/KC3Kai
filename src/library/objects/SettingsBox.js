@@ -166,6 +166,65 @@ To be dynamically used on the settings page
 		});
 	};
 	
+	SettingsBox.prototype.json = function( options ){
+		var self = this;
+		$(".options", this.element).append(
+			$("<textarea/>")
+				.addClass("json_text")
+				.val( JSON.stringify(ConfigManager[ this.config ]) )
+				.on("change", function(){
+					var newValue = false;
+					try {
+						newValue = JSON.parse($(this).val());
+						ConfigManager[ self.config ] = newValue;
+						ConfigManager.save();
+						elementControl($(this).parent().siblings(".note"), '', KC3Meta.term("SettingsErrorNG"));
+					} catch (e) {
+						elementControl($(this).parent().siblings(".note"), 'red', KC3Meta.term("SettingsErrorSuper"));
+					}
+				})
+		);
+	};
+	
+	SettingsBox.prototype.textarea = function( options ){
+		var self = this;
+		$(".options", this.element).append(
+			$("<textarea/>")
+				.addClass("huge_text")
+				.val( ConfigManager[ this.config ] )
+				.on("change", function(){
+					ConfigManager[ self.config ] = $(this).val();
+					ConfigManager.save();
+					elementControl($(this).parent().siblings(".note"), '', KC3Meta.term("SettingsErrorNG"));
+				})
+		);
+	};
+	
+	SettingsBox.prototype.dropdown = function( options ){
+		var self = this;
+		var choiceClass = "choices_" + this.config;
+		
+		$(".options", this.element).append(
+			$("<select/>")
+				.addClass("dropdown")
+				.on("change", function(){
+					ConfigManager[ self.config ] = $(this).val();
+					ConfigManager.save();
+					elementControl($(this).parent().siblings(".note"), '', KC3Meta.term("SettingsErrorNG"));
+				})
+		);
+		
+		for(var ctr in options.choices){
+			$(".options select", this.element).append(
+				$("<option/>")
+				.attr("value", options.choices[ctr][0] )
+				.prop("selected", options.choices[ctr][0] == ConfigManager[ self.config ])
+				.text( KC3Meta.term( options.choices[ctr][1] ) )
+				.prop("disabled", typeof options.choices[ctr][2] != "undefined")
+			);
+		}
+	};
+	
 	function elementControl(ele,colorCSS,msg) {
 		return ele.stop(true, true).css('color',colorCSS).text(msg).show().fadeOut(2000);
 	}

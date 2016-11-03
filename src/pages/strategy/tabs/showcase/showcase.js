@@ -6,7 +6,7 @@
 	KC3StrategyTabs.showcase.definition = {
 		tabSelf: KC3StrategyTabs.showcase,
 		
-		shipCache: { bb:[], fbb:[], bbv:[], cv:[], cvl:[], ca:[], cav:[], cl:[], dd:[], ss:[], clt:[], ax:[], ao:[] },
+		shipCache: {},
 		gearCache: {},
 		equipTypes: {
 			"t2": {
@@ -85,10 +85,22 @@
 		},
 		
 		/* INIT
-		Prepares all data needed
+		Prepares static data needed
 		---------------------------------*/
 		init :function(){
+		},
+		
+		/* RELOAD
+		Prepares latest fleets data
+		---------------------------------*/
+		reload :function(){
 			var ctr, ThisShip, TempShipList, self=this;
+			// Reload data from local storage
+			KC3ShipManager.load();
+			KC3GearManager.load();
+			// Clean cache data
+			this.shipCache = { bb:[], fbb:[], bbv:[], cv:[], cvl:[], ca:[], cav:[], cl:[], dd:[], ss:[], clt:[], ax:[], ao:[] };
+			this.gearCache = {};
 			
 			// Convert ship list object into array
 			TempShipList = $.map(KC3ShipManager.list, function(value, index) {
@@ -182,10 +194,12 @@
 			$.each(this.shipCache, function(stype, stypeList){
 				
 				$.each(stypeList, function(index, shipObj){
+					if (shipObj.level == 1) return true;
+					
 					shipBox = $(".tab_showcase .factory .show_ship").clone();
 					$(".ship_pic img", shipBox).attr("src", KC3Meta.shipIcon( shipObj.masterId ) );
 					$(".ship_name", shipBox).html( shipObj.name() );
-					$(".ship_level", shipBox).html( KC3Meta.term("LevelText")+" "+ shipObj.level );
+					$(".ship_level", shipBox).html( KC3Meta.term("LevelShort")+" "+ shipObj.level );
 					self.checkModStat(shipBox, "api_houg", "fp", 0, shipObj);
 					self.checkModStat(shipBox, "api_raig", "tp", 1, shipObj);
 					self.checkModStat(shipBox, "api_tyku", "aa", 2, shipObj);
@@ -230,7 +244,7 @@
 				}
 				
 				// Get 4 most powerful gear on this type
-				TopGears = MergedList.splice(0,4);
+				TopGears = MergedList.slice(0,4);
 				// console.log("TopGears for", element.name, TopGears);
 				
 				// Create gear-type box

@@ -18,31 +18,31 @@
 			
 			var timeNow = (new Date()).getTime();
 			var self = this;
-			var MasterChanged = false;
+			var masterChanged = false;
 			
-			$.each(KC3Master._newShips, function(ship_id, ship_time){
+			$.each(KC3Master.new_ships(), function(ship_id, ship_time){
 				console.log("testing ship time", timeNow, ship_time, "diff=", timeNow-ship_time);
 				if(timeNow-ship_time > 7*24*60*60*1000){
-					delete KC3Master._newShips[ship_id];
+					KC3Master.remove_new_ship(ship_id);
 					console.log("SHIP", ship_id, "has expired from update list");
-					MasterChanged = true;
+					masterChanged = true;
 				}else{
 					self.newShips.push( KC3Master.ship(ship_id) );
 				}
 			});
 			
-			$.each(KC3Master._newItems, function(item_id, item_time){
+			$.each(KC3Master.new_slotitems(), function(item_id, item_time){
 				console.log("testing item time", timeNow, item_time, "diff=", timeNow-item_time);
 				if(timeNow-item_time > 7*24*60*60*1000){
-					delete KC3Master._newItems[item_id];
+					KC3Master.remove_new_slotitem(item_id);
 					console.log("ITEM", item_id, "has expired from update list");
-					MasterChanged = true;
+					masterChanged = true;
 				}else{
 					self.newGears.push( KC3Master.slotitem(item_id) );
 				}
 			});
 			
-			if(MasterChanged){
+			if(masterChanged){
 				console.log("master changed, saving..");
 				KC3Master.save();
 			}
@@ -57,21 +57,42 @@
 		execute :function(){
 			$(".tab_mstupdate .runtime_id").text(chrome.runtime.id);
 			
-			var shipBox, gearBox, shipFile;
+			var shipBox, gearBox, shipFile, shipVersion, shipSrc, appendToBox;
 			var self = this;
+			var linkClickFunc = function(e){
+				KC3StrategyTabs.gotoTab($(this).data("tab"), $(this).data("api_id"));
+			};
 
 			// New Ship list
-			$.each(this.newShips, function(index, ShipData){
+			$.each(this.newShips, function(index, shipData){
 				shipBox = $(".tab_mstupdate .factory .mstship").clone();
-				shipFile = KC3Master.graph_id(ShipData.api_id);
+				shipFile = KC3Master.graph(shipData.api_id).api_filename;
+				shipVersion = KC3Master.graph(shipData.api_id).api_version[0];
+				shipSrc = "../../../../assets/swf/card.swf?sip="+self.server_ip+"&shipFile="+shipFile;
 				
-				$(".ship_cg embed", shipBox).attr("src", "../../../../assets/swf/card.swf?sip="+self.server_ip+"&shipFile="+shipFile+"&abyss="+(ShipData.api_id>500?1:0));
+				if (shipData.api_id <= 500) {
+					// NON-SEASONAL CG
+					shipSrc += "&abyss=0"+(!shipVersion?"":"&ver="+shipVersion);
+					appendToBox = ".tab_mstupdate .mstships";
+				} else if (shipData.api_id <= 800) {
+					// ABYSSALS
+					shipSrc += "&abyss=1"+(!shipVersion?"":"&ver="+shipVersion);
+					appendToBox = ".tab_mstupdate .mstabyss";
+				} else {
+					// SEASONAL CG
+					shipSrc += "&abyss=0&forceFrame=8";
+					appendToBox = ".tab_mstupdate .mstseason";
+				}
 				
-				// $("a", shipBox).attr("href", "?#mstship-"+ShipData.api_id);
+				shipSrc += !shipVersion ? "" : "&ver="+shipVersion;
 				
-				$(".ship_name", shipBox).text( KC3Meta.shipName( ShipData.api_name ) );
+				$(".ship_cg embed", shipBox).attr("src", shipSrc).attr("menu", "false");
+				$(".ship_name", shipBox).text( KC3Meta.shipName( shipData.api_name ) );
+				$(".ship_name", shipBox).data("tab", "mstship");
+				$(".ship_name", shipBox).data("api_id", shipData.api_id);
+				$(".ship_name", shipBox).click(linkClickFunc);
 				
-				shipBox.appendTo(".tab_mstupdate .mstships");
+				shipBox.appendTo(appendToBox);
 			});
 			$("<div/>").addClass("clear").appendTo(".tab_mstupdate .mstships");
 
@@ -86,9 +107,10 @@
 					$(".gear_cg img", gearBox).hide();
 				}
 				
-				// $("a", gearBox).attr("href", "?#mstgear-"+GearData.api_id);
-				
 				$(".gear_name", gearBox).text( KC3Meta.gearName( GearData.api_name ) );
+				$(".gear_name", gearBox).data("tab", "mstgear");
+				$(".gear_name", gearBox).data("api_id", GearData.api_id);
+				$(".gear_name", gearBox).click(linkClickFunc);
 				
 				gearBox.appendTo(".tab_mstupdate .mstgears");
 			});

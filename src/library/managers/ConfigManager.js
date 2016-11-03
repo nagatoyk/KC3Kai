@@ -15,12 +15,15 @@ Retreives when needed to apply on components
 			return {
 				version				: 8,
 				language			: "en",
-				elosFormula 		: 3,
+				elosFormula 		: 4,
 				hqExpDetail 		: 1,
 				timerDisplayType	: 1,
 				marryLevelFormat	: 0,
 				checkLiveQuests		: true,
-				
+				devOnlyPages		: false,
+				forceDMMLogin       : false,
+				apiRecorder         : false,
+
 				DBSubmission_enabled: 0,
 				DBSubmission_key : '',
 
@@ -33,12 +36,18 @@ Retreives when needed to apply on components
 				info_craft 			: true,
 				info_compass 		: true,
 				info_battle 		: true,
+				info_btrank			: true,
 				info_btstamp 		: false,
-				info_boss 			: false,
-				info_troll 			: false,
-				info_delta 			: false,
 				info_fleetstat 		: true,
+				info_blink_gauge	: true,
+				info_boss 			: false,
+				info_delta 			: false,
 				info_auto_exped_tab : true,
+				info_auto_fleet_view: true,
+				info_eng_stype		: false,
+				info_force_ship_lang: "",
+				info_salt 			: false,
+				info_troll 			: false,
 
 				// AIR PROFICIENCY BONUSES (Configurable by user)
 				air_formula			: 3, // 1=no veteran 2=veteran average 3=veteran bounds
@@ -46,7 +55,10 @@ Retreives when needed to apply on components
 					"6":  [0, 1.35, 3.5, 7.1, 11.4, 16.8, 17, 25],
 					"7":  [0,    1,	  1,   1,    2,	   2,  2,  3],
 					"8":  [0,    1,	  1,   1,    2,	   2,  2,  3],
-					"11": [0,    1,	  1,   3,    3,	   7,  7,  9]
+					"11": [0,    1,	  1,   3,    3,	   7,  7,  9],
+					"45": [0, 1.35, 3.5, 7.1, 11.4, 16.8, 17, 25],
+					"47": [0, 1.35, 3.5, 7.1, 11.4, 16.8, 17, 25],
+					"48": [0, 1.35, 3.5, 7.1, 11.4, 16.8, 17, 25]
 				},
 				air_bounds			: {
 					"6": [
@@ -68,11 +80,35 @@ Retreives when needed to apply on components
 						[0,0], // 0
 						[0,1], [0,1], [1,3], // 3
 						[1,3], [3,7], [3,7], [7,9]	// 7
-					]},
-
+					],
+					"45": [
+						[0.026, 0.845], // 0
+						[1, 1.715], [3.212, 3.984], [6.845, 7.504], // 3
+						[11.205, 11.786], [16.639, 17], [16.999, 17.205], [24.679, 25.411] // 7
+					],
+					"47": [
+						[0.026, 0.845], // 0
+						[1, 1.715], [3.212, 3.984], [6.845, 7.504], // 3
+						[11.205, 11.786], [16.639, 17], [16.999, 17.205], [24.679, 25.411] // 7
+					],
+					"48": [
+						[0.026, 0.845], // 0
+						[1, 1.715], [3.212, 3.984], [6.845, 7.504], // 3
+						[11.205, 11.786], [16.639, 17], [16.999, 17.205], [24.679, 25.411] // 7
+					]
+				},
+				
+				salt_list 		: new KC3ShipMasterList(),
+				wish_list 		: new KC3ShipMasterList(),
+				lock_list 		: new KC3ShipRosterList(),
+				lock_prep 		: [],
+				dismissed_hints	: {},
+				
 				ss_mode				: 0,
 				ss_type				: 'JPG',
+				ss_quality 			: 70,
 				ss_directory 		: 'KanColle',
+				ss_dppx 			: 1,
 				
 				alert_diff 			: 59,
 				alert_morale_notif	: true,
@@ -84,7 +120,14 @@ Retreives when needed to apply on components
 				alert_supply 		: 3,
 				alert_supply_exped 	:true,
 				alert_idle_counter	: 1,
+				
 				alert_taiha			: false,
+				alert_taiha_blur	: false,
+				alert_taiha_blood	: true,
+				alert_taiha_ss		: false,
+				alert_taiha_sound	: false,
+				alert_taiha_pvp		: false,
+				alert_taiha_panel	: true,
 				
 				api_translation		: true,
 				api_tracking 		: true,
@@ -97,6 +140,12 @@ Retreives when needed to apply on components
 				api_bg_size			: "cover",
 				api_bg_position		: "top center",
 				api_gameScale		: 100,
+				api_subtitles		: true,
+				subtitle_font		: "\"Trebuchet MS\",\"Lucida Grande\",\"Lucida Sans Unicode\",\"Lucida Sans\",Tahoma,sans-serif",
+				subtitle_size		: 22,
+				subtitle_bold		: false,
+				subtitle_display	: "ghost",
+				google_translate	: true,
 				
 				dmm_forcecookies	: false,
 				dmm_customize		: false,
@@ -116,7 +165,9 @@ Retreives when needed to apply on components
 				pan_bg_image		: "",
 				pan_bg_size			: "cover",
 				pan_bg_position		: "top center",
-				pan_opacity 		: 100
+				pan_opacity 		: 100,
+
+				sr_theme			: "legacy"
 			};
 		},
         
@@ -136,8 +187,14 @@ Retreives when needed to apply on components
 
 		// Load previously saved config
 		load : function(){
+			var self = this;
 			// Get old config or create dummy if none
 			var oldConfig = JSON.parse(localStorage.config || "{}");
+			
+			['salt','wish','lock'].forEach(function(shipListType){
+				var k = [shipListType,'list'].join('_');
+				oldConfig[k] = self.defaults()[k].concat(oldConfig[k] || []);
+			});
 			
 			// Check if old config has versioning and if its lower version
 			if( !oldConfig.version || (oldConfig.version < this.defaults().version) ){
@@ -149,8 +206,10 @@ Retreives when needed to apply on components
 				// Merge defaults, then old config values to ConfigManager
 				$.extend(this, this.defaults(), oldConfig);
 			}
-			if(this.language == "troll") // force reverting
-				this.language = "en";
+			
+			/* Force Revert */
+			if(this.language == "troll")
+				this.resetValueOf('language');
 		},
 		
 		// Save current config onto localStorage
@@ -161,7 +220,13 @@ Retreives when needed to apply on components
 		
 		// Toggle Equipment LoS
 		scrollElosMode :function(){
-			this.elosFormula = (this.elosFormula % 3) + 1;
+			this.elosFormula = (this.elosFormula % 4) + 1;
+			this.save();
+		},
+		
+		// Toggle Fighter Power
+		scrollFighterPowerMode :function(){
+			this.air_formula = (this.air_formula % 3) + 1;
 			this.save();
 		},
 		
@@ -178,5 +243,88 @@ Retreives when needed to apply on components
 		}
 		
 	};
+	
+	var
+		IntFilterArray = function(filterFun){
+			function LocalArray(){}
+			LocalArray.prototype = [];
+			
+			// http://stackoverflow.com/questions/1960473/unique-values-in-an-array
+			function arrayUniquefy(x,i,a){ return a.indexOf(x) === i; }
+			
+			// http://perfectionkills.com/how-ecmascript-5-still-does-not-allow-to-subclass-an-array/
+			function KC3ShipList(){
+				if(this instanceof KC3ShipList){
+					if (arguments.length === 1) {
+						this.length = arguments[0];
+					} else if (arguments.length) {
+						this.push.apply(this,arguments);
+					}
+				}else{
+					throw new Error("Cannot invoke constructor without `new` keyword");
+				}
+			}
+			
+			KC3ShipList.prototype = new LocalArray();
+			KC3ShipList.prototype.constructor = KC3ShipList;
+			
+			Object.defineProperties(KC3ShipList.prototype,{
+				push:{value:function push(){
+					var _push,_args,nAry,nLen;
+					_args = Array.prototype.slice.apply(arguments);
+					_push = Function.prototype.apply.bind(Array.prototype.push,this);
+					nAry  = _args.filter(arrayUniquefy).filter(filterFun.bind(this));
+					nLen  = nAry.length;
+					_push(nAry);
+					return nLen;
+				}},
+				unshift:{value:function unshift(){
+					var _ushf,_args,nLen;
+					_args = Array.prototype.slice.apply(arguments);
+					_ushf = Function.prototype.apply.bind(Array.prototype.unshift,this);
+					nAry  = _args.filter(arrayUniquefy).filter(filterFun.bind(this));
+					nLen  = nAry.length;
+					_ushf(nAry);
+					return nLen;
+				}},
+				
+				concat:{value:function concat(){
+					var _slic,_args;
+					_slic = Function.prototype.apply.bind(Array.prototype.slice);
+					_args = _slic(arguments);
+					return new (KC3ShipList.bind.apply(KC3ShipList,[null].concat([].concat.apply([],[this].concat(_args).map(function(shiplist){
+						return _slic(shiplist);
+					})))))();
+				}},
+				slice:{value:function slice(){
+					var _slic,_args,ary;
+					_slic = Function.prototype.apply.bind(Array.prototype.slice);
+					_args = _slic(arguments);
+					ary   = _slic(this,_args);
+					return new (KC3ShipList.bind.apply(KC3ShipList,[null].concat(ary)))();
+				}},
+				
+				exists:{value:function exists(){
+					var _slic,_args,self;
+					_slic = Function.prototype.apply.bind(Array.prototype.slice);
+					_args = _slic(arguments).map(Number);
+					self  = this;
+					return _args.some(function(requestInt){
+						return self.indexOf(requestInt)>=0;
+					});
+				}},
+				
+				toJSON:{value:function toJSON(){return [].slice.apply(this);}},
+			});
+			return KC3ShipList;
+		},
+		KC3ShipMasterList = IntFilterArray(function(x){
+			var ret = !isNaN(x) && isFinite(x) && typeof x === 'number' && !this.exists(x);
+			try { ret &= KC3Master.ship(x).kc3_model == 1; } catch (e) {} finally { return ret; }
+		}),
+		KC3ShipRosterList = IntFilterArray(function(x){
+			var ret = !isNaN(x) && isFinite(x) && typeof x === 'number' && !this.exists(x);
+			try { ret &= KC3ShipManager.get(x).rosterId == x; } catch (e) {} finally { return ret; }
+		});
 	
 })();

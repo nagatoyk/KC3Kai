@@ -13,6 +13,8 @@ Listens to network history and triggers callback if game events happen
 		eventTypes : {
 			GameStart: [],
 			CatBomb: [],
+			APIError: [],
+			Bomb201: [],
 			GameUpdate: [],
 			HomeScreen: [],
 			HQ: [],
@@ -22,6 +24,7 @@ Listens to network history and triggers callback if game events happen
 			Timers: [],
 			Quests: [],
 			Fleet: [],
+			Lbas: [],
 			SortieStart: [],
 			CompassResult: [],
 			BattleStart: [],
@@ -29,6 +32,7 @@ Listens to network history and triggers callback if game events happen
 			BattleResult: [],
 			CraftGear: [],
 			CraftShip: [],
+			Modernize: [],
 			ClearedMap: [],
 			PvPStart: [],
 			PvPNight: [],
@@ -36,6 +40,7 @@ Listens to network history and triggers callback if game events happen
 			ExpeditionSelection: [],
 			ExpeditionStart: [],
 			ExpedResult: [],
+			GunFit: [],
 		},
 		delayedUpdate: {},
 
@@ -65,7 +70,7 @@ Listens to network history and triggers callback if game events happen
 				});
 				this.delayedUpdate[eventName] = 0;
 			} else {
-				console.log("Prevented call to ",eventName);
+				console.log("Prevented call to", eventName);
 				this.delayedUpdate[eventName] -= 1;
 			}
 		},
@@ -134,10 +139,18 @@ Listens to network history and triggers callback if game events happen
 						}
 					});
 					request.getContent(function(x){
-						var data = JSON.parse(/svdata=(.+)$/.exec(x)[1]);
-						message.api_status = data.api_result;
-						message.api_result = data.api_result_msg;
-						(new RMsg("service", "gameScreenChg", message)).execute();
+						try {
+							var data = JSON.parse(/svdata=(.+)$/.exec(x)[1]);
+							message.api_status = data.api_result;
+							message.api_result = data.api_result_msg;
+						} catch (e) {
+							// Only prevent the data parsing error
+							message.api_status = e.name;
+							message.api_result = e.message;
+							console.error("Prevented ",e.name,e.message,e.stack);/*RemoveLogging:skip*/
+						} finally {
+							(new RMsg("service", "gameScreenChg", message)).execute();
+						}
 					});
 				}else{
 					message.api_status = false;
@@ -150,6 +163,39 @@ Listens to network history and triggers callback if game events happen
 			if(request.request.url.indexOf("resources/image/furniture") > -1){
 				// Clear overlays upon entering furniture menu
 				KC3Network.clearOverlays();
+			}
+			
+			// Overlay subtitles
+			// http://203.104.209.39/kcs/sound/kcdbtrdgatxdpl/178798.mp3?version=5
+			if(request.request.url.indexOf("/kcs/sound/") > -1){
+				var soundPaths = request.request.url.split("/");
+				if(soundPaths[5]=="titlecall"){
+					console.log("DETECTED titlecall sound");
+					(new RMsg("service", "subtitle", {
+						voicetype: "titlecall",
+						filename: soundPaths[6],
+						voiceNum: soundPaths[7].split(".")[0],
+						tabId: chrome.devtools.inspectedWindow.tabId
+					})).execute();
+				}else if(soundPaths[5]=="kc9999"){
+					console.log("DETECTED NPC sound", soundPaths);
+					(new RMsg("service", "subtitle", {
+						voicetype: "npc",
+						filename: "",
+						voiceNum: soundPaths[6].split(".")[0],
+						tabId: chrome.devtools.inspectedWindow.tabId
+					})).execute();
+				}else{
+					console.log("DETECTED shipgirl sound");
+					var shipGirl = KC3Master.graph_file(soundPaths[5].substring(2));
+					var voiceLine = KC3Meta.getVoiceLineByFilename(shipGirl, soundPaths[6].split(".")[0]);
+					(new RMsg("service", "subtitle", {
+						voicetype: "shipgirl",
+						shipID: shipGirl,
+						voiceNum: voiceLine,
+						tabId: chrome.devtools.inspectedWindow.tabId
+					})).execute();
+				}
 			}
 		},
 

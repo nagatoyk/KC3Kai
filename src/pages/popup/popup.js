@@ -1,8 +1,7 @@
 (function(){
 	"use strict";
-	_gaq.push(['_trackPageview']);
 	
-	var myVersion = Number(chrome.runtime.getManifest().version);
+	var myVersion = chrome.runtime.getManifest().version;
 	
 	/*
 	Starting v20, time indicators do not count down (kc3 update, pvp, quest resets).
@@ -21,34 +20,76 @@
 		// Show estimated time until next update
 		$.ajax({
 			dataType: "json",
-			url: "https://raw.githubusercontent.com/KC3Kai/KC3Kai/master/update?v="+((new Date()).getTime()),
+			async: true,
+			url: "https://raw.githubusercontent.com/KC3Kai/KC3Kai/master/update?v="+(Date.now()),
 			success: function(data, textStatus, request){
-				// If current installed version less than latest
-				if( myVersion < Number(data.version) ){
-					var UpdateDiff = (new Date(data.time)).getTime() - (new Date()).getTime();
-					if(UpdateDiff > 0){
-						$(".nextVersion").html( "v"+data.version+" in <span class=\"timer\">"+String(UpdateDiff/1000).toHHMMSS()+"</span>");
-					}else{
-						$(".nextVersion").html( "v"+data.version+" "+KC3Meta.term("MenuScheduledNow"));
+				if (!!data.pr) {
+					$(".nextVersion").attr("href", data.pr);
+				}
+				if( myVersion != data.version ){
+					// If unknown time
+					if (data.time === "") {
+						$(".nextVersion").html( data.version+" "+KC3Meta.term("MenuScheduledSoon"));
+					
+					// If there is a fixed scheduled time
+					} else {
+						// If current installed version less than latest
+						var UpdateDiff = (new Date(data.time)).getTime() - Date.now();
+						
+						if(UpdateDiff > 0){
+							$(".nextVersion").html( data.version+" in <span class=\"timer\">"+String(UpdateDiff/1000).toHHMMSS()+"</span>");
+						}else{
+							$(".nextVersion").html( data.version+" "+KC3Meta.term("MenuScheduledNow"));
+						}
 					}
-				// Installed version is the same or greater than latest
 				}else{
+					// Installed version is the same or greater than latest
 					$(".nextVersion").html( KC3Meta.term("MenuOnLatest") );
 				}
+				// Next Maintenance time
+				if (data.maintenance_start) {
+					var nextMtDate = new Date(data.maintenance_start);
+					var remaining = nextMtDate - new Date();
+					if (remaining >= 0) {
+						$(".timeServerMaintenance").text( String(remaining/1000).toHHMMSS() );
+					}  else {
+						var MtEnd = new Date(data.maintenance_end);
+						remaining = MtEnd - new Date();
+						if (remaining >= 0) {
+							$(".timeServerMaintenance").text( String(remaining/1000).toHHMMSS() );
+						} else {
+							$(".timeServerMaintenance").text(KC3Meta.term("MaintenanceComplete"));
+						}
+					}
+				} else {
+					$(".timeServerMaintenance").text(KC3Meta.term("MenuTimeUnknown"));
+				}
+				
 			}
 		});
 		
-		// Play via API Link
-		/*$("#play_cc").on('click', function(){
+		checkDMMLogin(function(isLoggedIn){
+			if (!isLoggedIn) {
+				$("#play_cc").hide();
+				$("#play_dmm").hide();
+				$("#play_dmmf").hide();
+				
+				$("#login_dmm").show();
+				
+				$(".wrapper").css("height", "372px");
+			}
+		});
+		
+		// Login on DMM
+		$("#login_dmm").on('click', function(){
 			localStorage.extract_api = false;
 			localStorage.dmmplay = false;
-			window.open("../game/api.html", "kc3kai_game");
-		});*/
+			window.open("https://www.dmm.com/my/-/login/=/path=Sg__/", "dmm_login");
+		});
 		
 		// Refresh API Link
 		// $("#get_api").on('click', function(){
 		$("#play_cc").on('click', function(){
-			_gaq.push(['_trackEvent', "Play via API", 'clicked']);
 			chrome.cookies.set({
 				url: "http://www.dmm.com",
 				name: "ckcy",
@@ -81,7 +122,6 @@
 		
 		// Play via DMM Frame
 		$("#play_dmmf").on('click', function(){
-			_gaq.push(['_trackEvent', "Play via DMM Frame", 'clicked']);
 			chrome.cookies.set({
 				url: "http://www.dmm.com",
 				name: "ckcy",
@@ -147,5 +187,28 @@
 			UTC6PM.getTime() - now);
 		$(".timePvP").text( String(remaining/1000).toHHMMSS() );
 	});
+	
+	function checkDMMLogin(callback){
+		// should be exactly of value "false",
+		// so we can fallback as if it's default value "true"
+		if (ConfigManager.forceDMMLogin === false) {
+			callback(true);
+			return;
+		}
+		// Check if user is already logged in on DMM
+		chrome.cookies.get({
+			url: "http://www.dmm.com/netgame/social/-/gadgets/=/app_id=854854/",
+			name: "INT_SESID"
+		}, function(cookie){
+			// Not yet logged in
+			if(cookie===null){
+				callback(false);
+				
+			// Already logged in
+			}else{
+				callback(true);
+			}
+		});
+	}
 	
 })();

@@ -44,6 +44,21 @@
 				$(".tab_lscs .build_list").html("");
 				
 				var ctr, thisBuild, buildbox;
+				var shipClickFunc = function(e){
+					KC3StrategyTabs.gotoTab("mstship", $(this).attr("alt"));
+				};
+				// response[0] = {
+				// 	id: 1,
+				// 	flag: 212,
+				// 	hq: "18066975",
+				// 	devmat: 10,
+				// 	rsc1: "30",
+				// 	rsc2: "30",
+				// 	rsc3: "30",
+				// 	rsc4: "30",
+				// 	result: 55,
+				// 	time: 1459512349
+				// };
 				for(ctr in response){
 					thisBuild = response[ctr];
 					
@@ -51,6 +66,8 @@
 					
 					$(".build_id", buildbox).text( thisBuild.id );
 					$(".build_ficon img", buildbox).attr("src", KC3Meta.shipIcon(thisBuild.flag) );
+					$(".build_ficon img", buildbox).attr("alt", thisBuild.flag );
+					$(".build_ficon img", buildbox).click(shipClickFunc);
 					$(".build_flag", buildbox).text( KC3Meta.shipName( KC3Master.ship(thisBuild.flag).api_name ) );
 					
 					$(".build_rsc1", buildbox).text( thisBuild.rsc1 );
@@ -60,6 +77,8 @@
 					$(".build_devmat", buildbox).text( thisBuild.devmat );
 					
 					$(".build_ricon img", buildbox).attr("src", KC3Meta.shipIcon(thisBuild.result) );
+					$(".build_ricon img", buildbox).attr("alt", thisBuild.result );
+					$(".build_ricon img", buildbox).click(shipClickFunc);
 					$(".build_result", buildbox).text( KC3Meta.shipName( KC3Master.ship(thisBuild.result).api_name ) );
 					$(".build_time", buildbox).text( (new Date(thisBuild.time*1000)).format("mmm dd, yy - hh:MM tt") );
 				}
