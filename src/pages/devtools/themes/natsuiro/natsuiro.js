@@ -1041,13 +1041,13 @@
 				// we'll try switching to the next available fleet if any
 				ExpedTabAutoFleetSwitch(false);
 			}
-			NatsuiroListeners.UpdateExpeditionPlanner();
 
 			// If LBAS is selected, do not respond to rest fleet update
 			if (selectedFleet == 6) {
 				return false;
 			}
 
+			NatsuiroListeners.UpdateExpeditionPlanner();
 			var FleetSummary, MainRepairs;
 			$(".shiplist_single").empty();
 			$(".shiplist_single").hide();
@@ -1650,8 +1650,8 @@
 									.show()
 									.css("-webkit-filter","");
 							}
-	
-							enemyHPPercent = ( newEnemyHP / thisNode.originalHPs[index+7] );
+							
+							enemyHPPercent = ( newEnemyHP / thisNode.maxHPs.enemy[index] );
 							if (enemyFleetBox == "combined") {
 								$(".module.activity .abyss_hp_bar_"+(index+1))
 									.css("height", 15*enemyHPPercent);
@@ -1791,7 +1791,7 @@
 								.css("-webkit-filter",(data||{safeSunk:false}).safeSunk ? "grayscale(100%)" : "");
 						}
 						
-						enemyHPPercent = ( newEnemyHP / thisNode.originalHPs[index+7] );
+						enemyHPPercent = ( newEnemyHP / thisNode.maxHPs.enemy[index] );
 						if (enemyFleetBox == "combined") {
 							$(".module.activity .abyss_hp_bar_"+(index+1)).css("height", 15*enemyHPPercent);
 							enemyBarHeight = $(".module.activity .abyss_hp_bar_"+(index+1)).height();
@@ -2074,7 +2074,7 @@
 								.css("-webkit-filter","grayscale(100%)");
 						}
 
-						enemyHPPercent = ( newEnemyHP / thisPvP.originalHPs[index+7] );
+						enemyHPPercent = ( newEnemyHP / thisPvP.maxHPs.enemy[index] );
 						$(".module.activity .abyss_hp_bar_"+(index+1)).css("width", 28*enemyHPPercent);
 
 						if(enemyHPPercent <= 0.25){
@@ -2290,8 +2290,8 @@
 		},
 
 		UpdateExpeditionPlanner: function (data) {
-			// if combined fleet, cancel action
-			if(selectedFleet===5){ return false; }
+			// if combined fleet or LBAS, cancel action
+			if(selectedFleet===5 || selectedFleet===6){ return false; }
 
 			$( ".module.activity .activity_expeditionPlanner .expres_greatbtn img" )
 				.attr("src", "../../../../assets/img/ui/btn-"+(plannerIsGreatSuccess?"":"x")+"gs.png");

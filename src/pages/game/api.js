@@ -92,7 +92,8 @@ $(document).on("ready", function(){
 					top: "auto",
 					bottom: "auto",
 					right: "auto",
-					width: $(".box-game").width()
+					width: $(".box-game").width(),
+					zoom: ((ConfigManager.api_gameScale || 100) / 100)
 				});
 				break;
 			case "stick":
@@ -451,6 +452,7 @@ var interactions = {
 		var subtitleText = false;
 		var quoteIdentifier = "";
 		var quoteVoiceNum = request.voiceNum;
+		var quoteSpeaker = "";
 		switch(request.voicetype){
 			case "titlecall":
 				quoteIdentifier = "titlecall_"+request.filename;
@@ -460,9 +462,12 @@ var interactions = {
 				break;
 			default:
 				quoteIdentifier = request.shipID;
+				if(ConfigManager.subtitle_speaker){
+					quoteSpeaker = KC3Meta.shipName(KC3Master.ship(quoteIdentifier).api_name);
+				}
 				break;
 		}
-		console.debug("looking up quote:", quoteIdentifier, quoteVoiceNum);
+		//console.debug("looking up quote:", quoteIdentifier, quoteVoiceNum);
 		subtitleText = KC3Meta.quote( quoteIdentifier, quoteVoiceNum );
 		
 		// hide first to fading will stop
@@ -487,7 +492,7 @@ var interactions = {
 			$(".overlay_subtitles").show();
 			var millis = subtitleVanishBaseMillis +
 				(subtitleVanishExtraMillisPerChar * $(".overlay_subtitles").text().length);
-			console.debug("vanish after", millis, "ms");
+			//console.debug("vanish after", millis, "ms");
 			subtitleVanishTimer = setTimeout(function(){
 				subtitleVanishTimer = false;
 				$(".overlay_subtitles").fadeOut(1000, function(){
@@ -504,6 +509,9 @@ var interactions = {
 					}
 				});
 			}, millis);
+			if(!!quoteSpeaker){
+				$(".overlay_subtitles span").html("{0}: {1}".format(quoteSpeaker, subtitleText));
+			}
 		}
 	}
 	
